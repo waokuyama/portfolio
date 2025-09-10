@@ -1,18 +1,20 @@
-### CLIでの実装手順
----
+
 ## 目次
+---
 - [目次](#目次)
-- [1. 信頼ポリシーファイル作成](#1-信頼ポリシーファイル作成)
-- [2. IAMロールの作成](#2-iamロールの作成)
-- [3.hello-world-roleロールにポリシーの付与](#3hello-world-roleロールにポリシーの付与)
-- [4.Lambda実行用のファイル作成](#4lambda実行用のファイル作成)
+- [1.信頼ポリシーファイル作成](#1信頼ポリシーファイル作成)
+- [2.IAMロールの作成](#2iamロールの作成)
+- [3.ロールにポリシーの付与](#3ロールにポリシーの付与)
+- [4.Lambda関数実行用のファイル作成](#4lambda関数実行用のファイル作成)
 - [5.Zipファイルの作成](#5zipファイルの作成)
 - [6.環境変数の定義(ARNの抽出)](#6環境変数の定義arnの抽出)
 - [7.Lambda関数の作成](#7lambda関数の作成)
-- [8.Lambda関数の実行](#8lambda関数の実行)
-- [9.削除](#9削除)
+- [8.](#8)
 ---
-## 1. 信頼ポリシーファイル作成
+入力値・出力値・確認・作成前の出力・作成後の出力・削除
+※ファイルの作成時：入力値・削除方法のみ記載 zipファイルは出力値あり
+
+## 1.信頼ポリシーファイル作成
 入力値
 ```javascript
 cat > trust.json <<'EOF'
@@ -35,19 +37,16 @@ EOF
 - "Principal": { "Service": "lambda.amazonaws.com" }<br>
 Lambdaサービスがこのロールを使うのを許可
 - "Action": "sts:AssumeRole"<br>
-一時的な認証情報の発行
-
-出力値<br>
-無し：作業ディレクトリ配下にtrust.jsonファイルの作成<br>
+一時的な認証情報の発行<br>
+※作業ディレクトリ配下にtrust.jsonファイルの作成<br>
 
 削除方法<br>
 ```javascript
 rm trust.json
 ```
 
----
-
-## 2. IAMロールの作成
+--- 
+## 2.IAMロールの作成
 入力値
 ```javascript
 aws iam create-role \
@@ -59,7 +58,7 @@ aws iam create-role \
 - --role-name hello-world-role<br>
 ロール名の設定「hello-world-role」
 - --assume-role-policy-document file://trust.json<br>
-信頼ポリシーの設定「trust.json」の中身を信頼ポリシーとして設定
+信頼ポリシーの設定「trust.json」ファイルの中身を信頼ポリシーとして設定
 
 出力値
 ```javascript
@@ -120,7 +119,7 @@ aws iam delete-role --role-name hello-world-role
 
 ---
 
-## 3.hello-world-roleロールにポリシーの付与
+## 3.ロールにポリシーの付与
 入力値
 ```javascript
 aws iam attach-role-policy \
@@ -168,7 +167,7 @@ aws iam detach-role-policy \
 
 ---
 
-## 4.Lambda実行用のファイル作成
+## 4.Lambda関数実行用のファイル作成
 入力値
 ```javascript
 cat > index.mjs <<'EOF'
@@ -191,9 +190,7 @@ EOF
   - console.log：Lambdaの実行ログをCloudWatchLogsに
   - JSON.stringify(event));：eventの中身をJSON文字列に変換してログ出力
   - return：戻り値()
-
-出力値<br>
-無し：作業ディレクトリ配下にtrust.jsonファイルの作成<br>
+※作業ディレクトリ配下にtrust.jsonファイルの作成<br>
 
 削除方法<br>
 ```javascript
@@ -275,11 +272,17 @@ aws lambda create-function \
 - --handler index.handler：実行するファイルと関数の指定 拡張子の記述は不要
 - --zip-file fileb://function.zip：アップロード先の指定
 
-
 出力値
 ```javascript
+"FunctionName": "hello-world",
+〜〜〜
 
+"LoggingConfig": {
+"LogFormat": "Text",
+"LogGroup": "/aws/lambda/hello-world"
+}
 ```
+
 確認方法(一覧)
 ```javascript
 aws lambda list-functions --region ap-northeast-1
@@ -306,6 +309,7 @@ Lambda関数が作成されている状態の出力
         "PackageType": "Zip",
         "Architectures": 
 ```
+
 削除方法
 ```javascript
 aws lambda delete-function \
@@ -315,72 +319,4 @@ aws lambda delete-function \
 
 ---
 
-## 8.Lambda関数の実行
-入力値
-```javascript
-aws lambda invoke \
-  --function-name hello-world \
-  --payload file://payload.json \
-  out.json \
-  --region ap-northeast-1 \
-  --cli-binary-format raw-in-base64-out
-```
-- aws lambda invoke：Lambda関数の実行
-- --function-name hello-world：関数名の指定「hello-world」
-- --payload file://payload.json \：関数に送る入力データ　ファイルの指定
-- out.json \：戻り値を保存するファイル
-- --region ap-northeast-1 \：使用するリージョン名(東京リージョン)
-- --cli-binary-format raw-in-base64-out：JSONをそのまま渡すためのオプション
-
-出力値
-```javascript
-{
-    "StatusCode": 200,
-    "ExecutedVersion": "$LATEST"
-}
-
-```
-確認方法(ローカルファイル out.json)
-```javascript
-cat out.json
-```
-確認方法(CloudWatch Logs)
-```javascript
-aws logs describe-log-groups --region ap-northeast-1
-```
-
-削除方法(out.json の削除（ローカルファイル）)
-```javascript
-rm out.json
-```
-削除方法(CloudWatch Logs の削除)
-```javascript
-aws logs delete-log-group \
-  --log-group-name /aws/lambda/hello-world \
-  --region ap-northeast-1
-```
----
-
-## 9.削除
-Lambda関数の削除
-```javascript
-aws lambda delete-function \
-  --function-name hello-world \
-  --region ap-northeast-1
-```
-
-ポリシーのデタッチ
-```javascript
-aws iam detach-role-policy \
-  --role-name hello-world-role \
-  --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-```
-
-IAMロールの削除
-削除方法<br>
-```javascript
-aws iam delete-role --role-name hello-world-role
-```
-※アタッチされているポリシーがあると削除できない<br>
-
----
+## 8.

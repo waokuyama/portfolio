@@ -4,10 +4,10 @@
 - [目次](#目次)
 - [1. IAMロール用のファイル作成](#1-iamロール用のファイル作成)
 - [2.ロールの作成](#2ロールの作成)
-- [3.ポリシーの付与](#3ポリシーの付与)
-- [4.site.mjsファイルの作成](#4sitemjsファイルの作成)
+- [3.ロールにポリシーの付与](#3ロールにポリシーの付与)
+- [4.Lambda関数実行用のファイル作成](#4lambda関数実行用のファイル作成)
 - [5.zip化](#5zip化)
-- [6.環境変数の定義](#6環境変数の定義)
+- [6.環境変数の定義(ARNの抽出)](#6環境変数の定義arnの抽出)
 - [7.Lambda関数の作成](#7lambda関数の作成)
 - [8.API Gateway 作成](#8api-gateway-作成)
 - [9.API の情報を取得](#9api-の情報を取得)
@@ -16,8 +16,12 @@
 - [12.HTML ファイル作成](#12html-ファイル作成)
 - [13.アップロード](#13アップロード)
 - [14.CloudFront ディストリビューション作成](#14cloudfront-ディストリビューション作成)
-- [15.動作確認](#15動作確認)
-- [16.削除](#16削除)
+- [15.OACの作成](#15oacの作成)
+- [16.CloudFront に OAC を紐づける](#16cloudfront-に-oac-を紐づける)
+- [17.S3 バケットポリシーファイルの作成](#17s3-バケットポリシーファイルの作成)
+- [18.バケットポリシーの適用](#18バケットポリシーの適用)
+- [19.動作確認](#19動作確認)
+- [20.削除](#20削除)
 ---
 
 ## 1. IAMロール用のファイル作成
@@ -43,10 +47,8 @@ EOF
 - "Principal": { "Service": "lambda.amazonaws.com" }<br>
 Lambdaサービスがこのロールを使うのを許可
 - "Action": "sts:AssumeRole"<br>
-一時的な認証情報の発行
-
-出力値<br>
-無し：作業ディレクトリ配下にsite-trust.jsonファイルの作成<br>
+一時的な認証情報の発行<br>
+※作業ディレクトリ配下にsite-trust.jsonファイルの作成<br>
 
 削除方法<br>
 ```javascript
@@ -138,9 +140,20 @@ aws iam delete-role --role-name site-lambda-role
 ```
 ※アタッチされているポリシーがあると削除できない<br>
 
+
+※AWSServiceRoleForAPIGatewayの削除方法
+```javascript
+aws iam delete-service-linked-role --role-name AWSServiceRoleForAPIGateway
+```
+出力値
+```javascript
+{
+    "DeletionTaskId": "task/aws-service-role/ops.apigateway.amazonaws.com/AWSServiceRoleForAPIGateway/ce57ccca-47a3-473b-9697-d8296a298b87"
+}
+```
 ---
 
-## 3.ポリシーの付与
+## 3.ロールにポリシーの付与
 入力値
 ```javascript
 aws iam attach-role-policy \
@@ -188,7 +201,7 @@ aws iam detach-role-policy \
 
 ---
 
-## 4.site.mjsファイルの作成
+## 4.Lambda関数実行用のファイル作成
 入力値
 ```javascript
 cat > site.mjs <<'EOF'
@@ -211,9 +224,7 @@ EOF
   - console.log：Lambdaの実行ログをCloudWatchLogsに
   - JSON.stringify(event));：eventの中身をJSON文字列に変換してログ出力
   - return：戻り値()
-
-出力値<br>
-無し：作業ディレクトリ配下にsite.mjsファイルの作成<br>
+※作業ディレクトリ配下にsite.mjsファイルの作成<br>
 
 削除方法<br>
 ```javascript
@@ -241,7 +252,7 @@ rm site.zip
 
 ---
 
-## 6.環境変数の定義
+## 6.環境変数の定義(ARNの抽出)
 入力値
 ```javascript
 ROLE_ARN=$(aws iam get-role \
@@ -578,10 +589,18 @@ aws cloudfront create-distribution \
   --origin-domain-name site-sample-bucket-123456.s3.amazonaws.com \
   --default-root-object index.html
 ```
+- Id と "DomainName": "xxxx.cloudfront.net" が含まれるのでメモ
+"Id": "xxxx",E2SXNKCUEIHE52
+"DomainName": "xxxx",d12id1bfsixiy3.cloudfront.net
 
 出力値
 ```javascript
-
+〜〜〜
+"WebACLId": "",
+"HttpVersion": "http2",
+"IsIPV6Enabled": true,
+"ContinuousDeploymentPolicyId": "",
+ "Staging": false
 ```
 
 確認方法
@@ -589,62 +608,302 @@ aws cloudfront create-distribution \
 aws cloudfront list-distributions
 ```
 
-削除方法
-ETag を取得
+作成できていない場合の出力
 ```javascript
-aws cloudfront get-distribution-config --id E1234567890ABC
+
 ```
-　
+
+作成できている場合の出力
+```javascript
+ "Items": 〜〜〜
+
+"WebACLId": "",
+"HttpVersion": "HTTP2",
+"IsIPV6Enabled": true,
+"Staging": false
+```
+
+削除方法
+ETag と Config を取得してローカルに保存
+```javascript
+aws cloudfront get-distribution-config \
+  --id <ディスID> \
+  --query "DistributionConfig" \
+  --output json > dist-config.json
+```
+- --id E1234567890ABC：ディストリビューション作成時にIdの項目
+
+dist-config.json を開いて "Enabled": false に変更
+```javascript
+vi dist-config.json
+```
+※"Enabled": true を "Enabled": false に直して保存
+vi操作
+- コマンドモード→入力モード：i
+- 入力モード→コマンドモード：ESC
+- :q：終了
+- :q!：強制終了(保存無し)
+- :wq：保存して終了
+
 無効化
 ```javascript
 aws cloudfront update-distribution \
-  --id E1234567890ABC \
-  --if-match ETag  \
+  --id <ディスID>  \
+  --if-match E29PTB7U2THSFY \
   --distribution-config file://dist-config.json
 ```
+- --id E1234567890ABC：aws cloudfront list-distributions＞Idの項目
+- --if-match ETag ：aws cloudfront get-distribution-config \
+  --id <DistributionID>
+
+出力
+```javascript
+
+```
+
 ディストリビューションが "Status": "Deployed" かつ "Enabled": false になったら削除可能
-無効化
+＞確認方法
+```javascript
+aws cloudfront list-distributions
+```
+
+
+削除方法
 ```javascript
 aws cloudfront delete-distribution \
-  --id E1234567890ABC \
-  --if-match ETag 
+  --id <ディスID> \
+  --if-match E26SWC39FXGFR3
 ```
 
+削除確認方法
+```javascript
+aws cloudfront list-distributions \
+  --query "DistributionList.Items[].Id"
+```
 
 ※出力される"DomainName": "xxxx.cloudfront.net" をメモ
+※ETagは更新されるたびに変わる？ため
+　タイミングはまだ不明だが変動するため注意が必要
+
 
 ---
 
-## 15.動作確認
+## 15.OACの作成
+```javascript
+aws cloudfront create-origin-access-control \
+  --origin-access-control-config '{
+    "Name": "MyOAC",
+    "Description": "Access control for S3 via CloudFront",
+    "SigningProtocol": "sigv4",
+    "SigningBehavior": "always",
+    "OriginAccessControlOriginType": "s3"
+  }'
+```
+- aws cloudfront create-origin-access-control：オリジンアクセスコントロールの作成
+- --origin-access-control-config ：OACの設定を渡す
+- "Description": "Access control for S3 via CloudFront"：メモ
+- "SigningProtocol": "sigv4"：署名方式　S3 と組み合わせる場合は sigv4 を使うのが推奨
+- "SigningBehavior": "always"：CloudFront がオリジンへ送るリクエストに対する指定
+  - always：常に署名を付ける（推奨。S3 を保護する目的ならこれ）
+  - never：署名しない（特殊用途）
+- "OriginAccessControlOriginType": OAC をどのタイプのオリジン向けに作るかを指定
+
+※出力のIdをメモ：E23Y1D5QAK8IOO
+
+出力値
+```javascript
+{
+    "Location": "https://cloudfront.amazonaws.com/2020-05-31/origin-access-control/E23Y1D5QAK8IOO",
+    "ETag": "ETVPDKIKX0DER",
+    "OriginAccessControl": {
+        "Id": "E23Y1D5QAK8IOO",
+        "OriginAccessControlConfig": {
+            "Name": "MyOAC",
+            "Description": "Access control for S3 via CloudFront",
+            "SigningProtocol": "sigv4",
+            "SigningBehavior": "always",
+            "OriginAccessControlOriginType": "s3"
+        }
+    }
+}
+```
+
+OAC確認方法
+```javascript
+aws cloudfront list-origin-access-controls --output table
+```
+
+---
+
+## 16.CloudFront に OAC を紐づける
+```javascript
+aws cloudfront get-distribution-config \
+  --id <DistributionID> \
+  --output json > dist-config.json
+```
+- 現在の設定ETagを取得できる
+
+DistributionConfigの中身だけ保存
+```javascript
+aws cloudfront get-distribution-config \
+  --id ディスID \
+  --query "DistributionConfig" \
+  --output json > dist-config.json
+```
+
+```javascript
+"Origins"＞"Quantity": 1＞ "Items"
+"OriginAccessControlId": 作成した OAC の ID を記入
+```
+
+viコマンドこの後記入　今は直接
+
+※後でコマンドによる変更確認
+
+```javascript
+aws cloudfront update-distribution \
+  --id <DistributionID> \
+  --if-match E2L7U05WKDS9S8 \
+  --distribution-config file://dist-config.json
+```
+- --if-match：aws cloudfront get-distribution-config \
+  --id <DistributionID>
+
+出力値
+```javascript
+〜〜〜
+"WebACLId": "",
+"HttpVersion": "http2",
+"IsIPV6Enabled": true,
+"ContinuousDeploymentPolicyId": "",
+"Staging": false
+```
+
+確認方法
+```javascript
+aws cloudfront get-distribution \
+  --id <DistributionID> \
+  --query "Distribution.DistributionConfig.Origins.Items[].[Id,DomainName,OriginAccessControlId]" \
+  --output table
+```
+内容：Id,DomainName,OriginAccessControlId]
+
+削除方法
+1."OriginAccessControlId"の値を空にする
+```javascript
+"Origins"＞"Quantity": 1＞ "Items"
+"OriginAccessControlId":""
+```
+- 空にする
+
+2.最新のETag取得
+```javascript
+aws cloudfront get-distribution-config \
+  --id <DistributionID> \
+  --output json > dist-config.json
+```
+
+元に戻す
+```javascript
+aws cloudfront get-distribution-config \
+  --id ディスID \
+  --query "DistributionConfig" \
+  --output json > dist-config.json
+```
+
+
+3.update-distributionで反映
+```javascript
+aws cloudfront update-distribution \
+  --id <DistributionID> \
+  --if-match <ETag> \
+  --distribution-config file://dist-config.json
+```
+
+4.紐付けが外れたら OAC を削除
+```javascript
+aws cloudfront get-origin-access-control \
+  --id <OAC_ID> \
+  --query 'ETag' \
+  --output text
+```
+
+```javascript
+aws cloudfront delete-origin-access-control \
+  --id <OAC_ID> \
+  --if-match <ETag>上記で出た出力値
+```
+
+- --if-match：aws cloudfront get-distribution-config \
+  --id <DistributionID>
+
+---
+
+## 17.S3 バケットポリシーファイルの作成
+```javascript
+cat > bucket-policy.json <<'EOF'
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "cloudfront.amazonaws.com"
+      },
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::site-sample-bucket-123456/*",
+      "Condition": {
+        "StringEquals": {
+          "AWS:SourceArn": "arn:aws:cloudfront::<AWSアカウントID>:distribution/<DistributionID>"
+        }
+      }
+    }
+  ]
+}
+EOF
+```
+- <AWSアカウントID>：AWS_IDの入力
+- <DistributionID>：ディスIDの入力
+
+---
+
+## 18.バケットポリシーの適用
+```javascript
+aws s3api put-bucket-policy \
+  --bucket site-sample-bucket-123456 \
+  --policy file://bucket-policy.json
+```
+
+確認
+```javascript
+aws s3api get-bucket-policy \
+  --bucket site-sample-bucket-123456
+```
+
+ポリシーのデタッチ
+```javascript
+aws s3api delete-bucket-policy \
+  --bucket site-sample-bucket-123456
+```
+
+---
+## 19.動作確認
 入力値(ブラウザ上)
 ```javascript
-https://xxxx.cloudfront.net
+https://
 ```
+URL確認方法
+```javascript
+aws cloudfront list-distributions \
+  --query "DistributionList.Items[].{Id:Id,DomainName:DomainName}" \
+  --output table
+```
+
 ---
 
-## 16.削除
+## 20.削除
 入力値
 ```javascript
-# CloudFront 削除 (ディストリビューションIDは確認必要)
-aws cloudfront delete-distribution --id CLOUDFRONT_ID --if-match ETAG
-
-# S3 削除
-aws s3 rb s3://site-sample-bucket-123456 --force
-
-# API Gateway 削除
-aws apigatewayv2 delete-api --api-id $API_ID --region ap-northeast-1
-
-# Lambda 削除
-aws lambda delete-function --function-name site-lambda --region ap-northeast-1
-
-# ロール削除
-aws iam detach-role-policy \
-  --role-name site-lambda-role \
-  --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-aws iam delete-role --role-name site-lambda-role
-
-# ローカルファイル削除
-rm site-trust.json site.mjs site.zip index.html
 
 ```
 ---
@@ -696,3 +955,50 @@ upload failed: ./index.html to s3://site-sample-bucket-123456/index.html An erro
 セキュア版(本番想定)
 本番想定の場合OAC(Origin Access Control)を設定してS3を非公開にしたまま配信
 この後実現予定
+
+CloudFrontディストリビューションの削除
+入力値
+```javascript
+seri@seris-MacBook-Air Desktop % aws cloudfront delete-distribution \
+  --id E3LYNLDG3Q9LSM \
+  --if-match E123URELMFM9QR 
+```
+出力値
+```javascript
+An error occurred (PreconditionFailed) when calling the DeleteDistribution operation: The request failed because it didn't meet the preconditions in one or more request-header fields.
+```
+意味
+エラー
+
+
+解決方法
+1：Enabled: trueのままだと削除できない：
+確認："Enabled": true,この部分が1箇所あった
+
+2：ETag が間違っている
+確認：aws cloudfront get-distribution-config --id <ディストリビューションID>の出力値をそのまま使う
+EQJW0Q7R6K1J3
+
+すごく大変だったまたこの後復習も込めて作成
+
+ブラウザ検索時
+入力値
+```javascript
+https://site-sample-bucket-123456.s3-ap-northeast-1.amazonaws.com/index.html
+```
+出力値
+```javascript
+This XML file does not appear to have any style information associated with it. The document tree is shown below.
+
+<Error>
+<Code>AccessDenied</Code>
+<Message>Access Denied</Message>
+<RequestId>RMJPQZWKHTD8DP7B</RequestId>
+<HostId>
+xw291gMsZx2DPKDeF2EZmnkOP4IVxb6Xq4BHxxfSBCN09W5HyT9cs9RxVFviMCde9Z2Hb1Govpg=
+</HostId>
+</Error>
+```
+
+原因：S3バケットのURLを入力している？
+解決方法：CloudFrontのULRを入力する？

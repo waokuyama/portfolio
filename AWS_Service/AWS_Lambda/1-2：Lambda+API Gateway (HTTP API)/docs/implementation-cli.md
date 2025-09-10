@@ -2,10 +2,10 @@
 ---
 ## 目次
 - [目次](#目次)
-- [1. IAMロール用のファイル作成](#1-iamロール用のファイル作成)
+- [1. 信頼ポリシーファイル作成](#1-信頼ポリシーファイル作成)
 - [2. ロール作成](#2-ロール作成)
-- [3. ポリシー付与](#3-ポリシー付与)
-- [4. greet.mjs 作成](#4-greetmjs-作成)
+- [3. ロールにポリシーの付与](#3-ロールにポリシーの付与)
+- [4. Lambda関数実行用のファイル作成](#4-lambda関数実行用のファイル作成)
 - [5. zip化](#5-zip化)
 - [6. 環境変数の定義(ARNの抽出)](#6-環境変数の定義arnの抽出)
 - [7. Lambda関数の作成](#7-lambda関数の作成)
@@ -16,7 +16,7 @@
 - [12. 削除](#12-削除)
 ---
 
-## 1. IAMロール用のファイル作成
+## 1. 信頼ポリシーファイル作成
 入力値
 ```javascript
 cat > greet-trust.json <<'EOF'
@@ -39,10 +39,8 @@ EOF
 - "Principal": { "Service": "lambda.amazonaws.com" }<br>
 Lambdaサービスがこのロールを使うのを許可
 - "Action": "sts:AssumeRole"<br>
-一時的な認証情報の発行
-
-出力値<br>
-無し：作業ディレクトリ配下にgreet-trust.jsonファイルの作成<br>
+一時的な認証情報の発行<br>
+※作業ディレクトリ配下にgreet-trust.jsonファイルの作成<br>
 
 削除方法<br>
 ```javascript
@@ -124,7 +122,7 @@ aws iam delete-role --role-name greet-world-role
 
 ---
 
-## 3. ポリシー付与
+## 3. ロールにポリシーの付与
 入力値
 ```javascript
 aws iam attach-role-policy \
@@ -172,7 +170,7 @@ aws iam detach-role-policy \
 
 ---
 
-## 4. greet.mjs 作成
+## 4. Lambda関数実行用のファイル作成
 入力値
 ```javascript
 cat > greet.mjs <<'EOF'
@@ -210,9 +208,8 @@ EOF
   - event.queryStringParameters.name：nameの入力値の格納
   - ※事前に入力値のチェックを入れることでエラーを防ぐことができる
 - return：戻り値()
+※作業ディレクトリ配下にgreet.mjsファイルの作成<br>
 
-出力値<br>
-無し：作業ディレクトリ配下にgreet.mjsファイルの作成<br>
 削除方法<br>
 ```javascript
 rm greet.mjs
@@ -260,7 +257,7 @@ ROLE_ARN=$(aws iam get-role \
 echo $ROLE_ARN
 ```
 環境変数が定義されていない状態の出力<br>
-無し：何も表示されない
+無し：Linux / Mac のシェル（bashやzsh）の中の環境変数<br>
 
 環境変数が定義されている状態の出力
 ```javascript
