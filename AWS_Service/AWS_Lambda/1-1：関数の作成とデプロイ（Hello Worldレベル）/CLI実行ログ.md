@@ -40,7 +40,7 @@ aws iam create-role \
         "Path": "/",
         "RoleName": "hello-world-role",
         "RoleId": "AROA53F2J43EMIBO47FPF",
-        "Arn": "arn:aws:iam::951725975240:role/hello-world-role",
+        "Arn": "arn:aws:iam::xxxx:role/hello-world-role",
         "CreateDate": "2025-09-02T11:23:53+00:00",
         "AssumeRolePolicyDocument": {
             "Version": "2012-10-17",
@@ -188,7 +188,7 @@ echo $ROLE_ARN
 ```
 環境変数が定義されている状態の出力
 ```javascript
-arn:aws:iam::951725975240:role/hello-world-role
+arn:aws:iam::xxxx:role/hello-world-role
 ```
 削除方法
 ```javascript

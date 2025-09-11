@@ -12,6 +12,7 @@
 - [8. APIの作成と環境変数の定義(APIの抽出)](#8-apiの作成と環境変数の定義apiの抽出)
 - [9. API\_ENDPOINT情報の抽出](#9-api_endpoint情報の抽出)
 - [10. LambdaにAPIGateway呼び出し権限を追加](#10-lambdaにapigateway呼び出し権限を追加)
+- [9.Lambda関数の実行](#9lambda関数の実行)
 - [11. 実行](#11-実行)
 - [12. 削除](#12-削除)
 ---
@@ -487,7 +488,6 @@ aws lambda remove-permission \
 ```
 
 ---
-
 ## 11. 実行
 入力値
 ```javascript

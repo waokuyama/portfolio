@@ -11,6 +11,7 @@
 - [7.Lambda関数の作成](#7lambda関数の作成)
 - [8.テストイベントファイルの作成](#8テストイベントファイルの作成)
 - [9.Lambda関数の実行](#9lambda関数の実行)
+- [10.削除](#10削除)
 
 ---
 ## 1. 信頼ポリシーファイル作成
@@ -431,6 +432,10 @@ aws logs delete-log-group \
   --log-group-name /aws/lambda/hello-world \
   --region ap-northeast-1
 ```
+---
+
+## 10.削除
+
 ---
 
 

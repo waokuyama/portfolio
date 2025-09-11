@@ -52,7 +52,7 @@ aws iam list-roles --query 'Roles[].RoleName' --output table
 
 ---
 
-## Lambda関数の作成
+## Lambda関数の作成時
 ### 1.
 入力値<br>
 ```javascript
@@ -69,3 +69,4 @@ aws lambda create-function \
 An error occurred (ValidationException) when calling the CreateFunction operation: 1 validation error detected: Value '' at 'role' failed to satisfy constraint: Member must satisfy regular expression pattern: arn:(aws[a-zA-Z-]*)?:iam::\d{12}:role/?[a-zA-Z_0-9+=,.@\-_/]+
 ```
 意味<br>
+指定した変数"$ROLE_ARN"が無い<br>

@@ -9,7 +9,9 @@
 - [5.Zipファイルの作成](#5zipファイルの作成)
 - [6.環境変数の定義(ARNの抽出)](#6環境変数の定義arnの抽出)
 - [7.Lambda関数の作成](#7lambda関数の作成)
-- [8.](#8)
+- [8.テストイベントファイルの作成](#8テストイベントファイルの作成)
+- [9.Lambda関数の実行](#9lambda関数の実行)
+- [10.入力〜削除](#10入力削除)
 ---
 入力値・出力値・確認・作成前の出力・作成後の出力・削除
 ※ファイルの作成時：入力値・削除方法のみ記載 zipファイルは出力値あり
@@ -319,4 +321,156 @@ aws lambda delete-function \
 
 ---
 
-## 8.
+## 8.テストイベントファイルの作成
+入力値
+```javascript
+cat > payload.json <<'EOF'
+{
+  "key1": "value1"
+}
+EOF
+```
+
+削除方法
+```javascript
+rm payload.json
+```
+
+---
+
+## 9.Lambda関数の実行
+入力値
+```javascript
+aws lambda invoke \
+  --function-name hello-world \
+  --payload file://payload.json \
+  out.json \
+  --region ap-northeast-1 \
+  --cli-binary-format raw-in-base64-out
+```
+- aws lambda invoke：Lambda関数の実行
+- --function-name hello-world：関数名の指定「hello-world」
+- --payload file://payload.json \：関数に送る入力データ　ファイルの指定
+- out.json \：戻り値を保存するファイル
+- --region ap-northeast-1 \：使用するリージョン名(東京リージョン)
+- --cli-binary-format raw-in-base64-out：JSONをそのまま渡すためのオプション
+
+出力値
+```javascript
+{
+    "StatusCode": 200,
+    "ExecutedVersion": "$LATEST"
+}
+
+```
+
+確認方法(ローカルファイル out.json)
+```javascript
+cat out.json
+```
+
+削除方法
+```javascript
+rm out.json
+```
+
+確認方法ログストリームの確認
+```javascript
+aws logs describe-log-streams \
+  --log-group-name /aws/lambda/hello-world \
+  --order-by LastEventTime \
+  --descending \
+  --limit 1 \
+  --query "logStreams[0].logStreamName" \
+  --output text
+```
+
+出力値
+```javascript
+2025/09/09/[$LATEST]558975d32bc048d989e946941c9f6df5
+```
+
+ログイベントの確認
+```javascript
+aws logs get-log-events \
+  --region ap-northeast-1 \
+  --log-group-name /aws/lambda/hello-world \
+  --log-stream-name '2025/09/09/[$LATEST]d4e5a0043b614fc4910f5eb82a1ed2e8' \
+  --limit 20 \
+  --query "events[].message" \
+  --output text
+```
+- log-stream-name：''(シングルクォーテーション)で囲んで中に上記ログストリーム記載
+※ダブルクォーテーションで囲むとエラーになる
+
+削除方法(out.json の削除（ローカルファイル）)
+```javascript
+rm out.json
+```
+
+ロググループ一覧表示
+```javascript
+aws logs describe-log-groups \
+  --region ap-northeast-1 \
+  --query "logGroups[].logGroupName" \
+  --output table
+```
+
+ロググループがない時の出力
+```javascript
+amplify-myamplifyapp-dev--UpdateRolesWithIDPFuncti-kx2HIfcCMhri  |
+|  /aws/lambda/amplify-myamplifyapp-dev-1511-UserPoolClientLambda-XDL9nJyVPStJ  |
+|  /aws/lambda/greet-world   
+```
+
+ロググループがある時の出力
+```javascript
+amplify-myamplifyapp-dev--UpdateRolesWithIDPFuncti-kx2HIfcCMhri  |
+|  /aws/lambda/amplify-myamplifyapp-dev-1511-UserPoolClientLambda-XDL9nJyVPStJ  |
+|  /aws/lambda/greet-world                                                      |
+|  /aws/lambda/hello-world  
+```
+
+
+ロググループの削除
+```javascript
+aws logs delete-log-group \
+  --log-group-name /aws/lambda/hello-world \
+  --region ap-northeast-1
+```
+
+---
+
+## 10.入力〜削除
+入力値
+```javascript
+
+```
+
+出力値
+```javascript
+
+```
+
+確認方法<br>
+```javascript
+
+```
+
+作成されていない状態の出力<br>
+```javascript
+
+```
+
+作成されている状態の出力<br>
+```javascript
+ 
+```
+
+削除方法<br>
+```javascript
+ 
+```
+
+---
+
