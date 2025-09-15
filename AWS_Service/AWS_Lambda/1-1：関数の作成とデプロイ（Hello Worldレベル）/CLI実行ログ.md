@@ -1,4 +1,5 @@
 # CLI実行ログ
+入力値と出力値のみ
 
 ## 1. IAMロール用のファイル作成
 入力値
@@ -17,11 +18,6 @@ EOF
 
 出力値<br>
 無し：作業ディレクトリ配下にtrust.jsonファイルの作成<br>
-
-削除方法<br>
-```javascript
-rm trust.json
-```
 
 ---
 
@@ -57,34 +53,6 @@ aws iam create-role \
     }
 }
 ```
-確認方法(ロール名の一覧表示)<br>
-```javascript
-aws iam list-roles --query 'Roles[].RoleName' --output table
-```
-ロールが作成されていない状態の出力
-```javascript
-|                   ListRoles                  |
-+----------------------------------------------+
-|  amplify-myamplifyapp-dev-151126-authRole    |
-|  amplify-myamplifyapp-dev-151126-unauthRole  |
-|  AWSServiceRoleForSupport                    |
-|  AWSServiceRoleForTrustedAdvisor 
-```
-ロールが作成されている状態の出力
-```javascript
-|                   ListRoles                  |
-+----------------------------------------------+
-|  amplify-myamplifyapp-dev-151126-authRole    |
-|  amplify-myamplifyapp-dev-151126-unauthRole  |
-|  AWSServiceRoleForSupport                    |
-|  AWSServiceRoleForTrustedAdvisor             |
-|  hello-world-role    
-```
-削除方法<br>
-```javascript
-aws iam delete-role --role-name hello-world-role
-```
-※アタッチされているポリシーがあると削除できない<br>
 
 ---
 
@@ -95,37 +63,9 @@ aws iam attach-role-policy \
   --role-name hello-world-role \
   --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 ```
-出力値<br>
-無し
 
-確認方法
-```javascript
-aws iam list-attached-role-policies \
-  --role-name hello-world-role
-```
-ポリシーが付与されていない状態の出力
-```javascript
-{
-    "AttachedPolicies": []
-}
-```
-ポリシーが付与されている状態の出力
-```javascript
-{
- "AttachedPolicies": [
-        {
-            "PolicyName": "AWSLambdaBasicExecutionRole",
-            "PolicyArn": "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-        }
-    ]
-}
-```
-ポリシーのデタッチ
-```javascript
-aws iam detach-role-policy \
-  --role-name hello-world-role \
-  --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-```
+出力値<br>
+無し<br>
 
 ---
 
@@ -142,12 +82,9 @@ export const handler = async (event) => {
 };
 EOF
 ```
+
 出力値<br>
 無し：作業ディレクトリ配下にtrust.jsonファイルの作成<br>
-削除方法<br>
-```javascript
-rm index.mjs
-```
 
 ---
 
@@ -156,13 +93,10 @@ rm index.mjs
 ```javascript
 zip function.zip index.mjs
 ```
+
 出力値
 ```javascript
 adding: index.mjs (deflated 25%)
-```
-削除方法<br>
-```javascript
-rm function.zip
 ```
 
 ---
@@ -175,25 +109,9 @@ ROLE_ARN=$(aws iam get-role \
   --query Role.Arn \
   --output text)
 ```
+
 出力値<br>
-無し：Linux / Mac のシェル（bashやzsh）の中の環境変数<br>
-
-確認方法
-```javascript
-echo $ROLE_ARN
-```
-環境変数が定義されていない状態の出力
-```javascript
-
-```
-環境変数が定義されている状態の出力
-```javascript
-arn:aws:iam::xxxx:role/hello-world-role
-```
-削除方法
-```javascript
-unset ROLE_ARN
-```
+無し：Linux / Mac のシェル（bashやzsh）の中の環境変数を定義<br>
 
 ---
 
@@ -208,47 +126,37 @@ aws lambda create-function \
   --handler index.handler \
   --zip-file fileb://function.zip
 ```
+
 出力値
 ```javascript
+"FunctionName": "hello-world",
+〜〜〜
 
-```
-確認方法(一覧)
-```javascript
-aws lambda list-functions --region ap-northeast-1
-```
-確認方法(単体の関数)
-```javascript
-aws lambda get-function \
-  --function-name hello-world \
-  --region ap-northeast-1
-```
-
-Lambda関数が作成されていない状態の出力
-```javascript
-{
-    "Functions": []
+"LoggingConfig": {
+"LogFormat": "Text",
+"LogGroup": "/aws/lambda/hello-world"
 }
-```
-Lambda関数が作成されている状態の出力
-```javascript
-〜〜
-        "RevisionId": "cafd739c-dafc-4c34-bb44-f26208a5eef3",
-        "State": "Active",
-        "LastUpdateStatus": "Successful",
-        "PackageType": "Zip",
-        "Architectures": 
-```
-削除方法
-```javascript
-aws lambda delete-function \
-  --function-name hello-world \
-  --region ap-northeast-1
 ```
 
 ---
 
-## 8.Lambda関数の実行
+## 8.テストイベントファイルの作成
 入力値
+```javascript
+cat > payload.json <<'EOF'
+{
+  "key1": "value1"
+}
+EOF
+```
+
+出力値
+無し：作業ディレクトリ配下にpayload.jsonファイルの作成<br>
+
+---
+
+## 9.Lambda関数の実行
+入力値<br>
 ```javascript
 aws lambda invoke \
   --function-name hello-world \
@@ -257,33 +165,14 @@ aws lambda invoke \
   --region ap-northeast-1 \
   --cli-binary-format raw-in-base64-out
 ```
+
 出力値
 ```javascript
 {
     "StatusCode": 200,
     "ExecutedVersion": "$LATEST"
 }
-
-```
-確認方法(ローカルファイル out.json)
-```javascript
-cat out.json
-```
-確認方法(CloudWatch Logs)
-```javascript
-aws logs describe-log-groups --region ap-northeast-1
 ```
 
-削除方法(out.json の削除（ローカルファイル）)
-```javascript
-rm out.json
-```
-削除方法(CloudWatch Logs の削除)
-```javascript
-aws logs delete-log-group \
-  --log-group-name /aws/lambda/hello-world \
-  --region ap-northeast-1
-```
 ---
 
-## 9.削除

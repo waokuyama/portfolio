@@ -1,6 +1,8 @@
+# ロール作成時
+入力値、出力値、出力値の意味、改善方法
 
-## ロール作成時
-### 1.同名ロール作成時エラー
+
+## 1.同名ロール作成時エラー
 入力値<br>
 ```javascript
 aws iam create-role \
@@ -17,6 +19,10 @@ An error occurred (EntityAlreadyExists) when calling the CreateRole operation: R
 ```javascript
 aws iam get-role --role-name hello-world-role
 ```
+
+改善方法<br>
+既存のファイルの削除
+
 削除方法
 ```javascript
 aws iam delete-role --role-name hello-world-role
@@ -31,8 +37,8 @@ aws iam list-roles --query 'Roles[].RoleName' --output table
 ```
 ---
 
-## ポリシー付与時
-### 1.付与するロール名が存在しない時
+# ポリシー付与時
+## 1.付与するロール名が存在しない時
 入力値<br>
 ```javascript
 aws iam attach-role-policy \
@@ -45,6 +51,10 @@ zsh: no such file or directory: span
 ```
 意味<br>
 指定したファイルやディレクトリが存在しない<br>
+
+改善方法<br>
+ロール一覧の確認、対象のロールが無ければ作成
+
 ロール名の一覧表示
 ```javascript
 aws iam list-roles --query 'Roles[].RoleName' --output table
@@ -52,8 +62,8 @@ aws iam list-roles --query 'Roles[].RoleName' --output table
 
 ---
 
-## Lambda関数の作成時
-### 1.
+# Lambda関数の作成時
+## 1.
 入力値<br>
 ```javascript
 aws lambda create-function \
@@ -68,5 +78,9 @@ aws lambda create-function \
 ```javascript
 An error occurred (ValidationException) when calling the CreateFunction operation: 1 validation error detected: Value '' at 'role' failed to satisfy constraint: Member must satisfy regular expression pattern: arn:(aws[a-zA-Z-]*)?:iam::\d{12}:role/?[a-zA-Z_0-9+=,.@\-_/]+
 ```
+
 意味<br>
-指定した変数"$ROLE_ARN"が無い<br>
+roleに渡した値が空<br>
+
+改善方法<br>
+環境変数「$ROLE_ARN」の定義

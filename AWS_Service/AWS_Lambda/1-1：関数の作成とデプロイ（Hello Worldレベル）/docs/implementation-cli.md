@@ -234,7 +234,7 @@ ROLE_ARN=$(aws iam get-role \
 - --output text：出力形式を テキストのみ にするオプション
 
 出力値<br>
-無し：Linux / Mac のシェル（bashやzsh）の中の環境変数<br>
+無し：Linux / Mac のシェル（bashやzsh）の中の環境変数を定義<br>
 
 確認方法
 ```javascript
